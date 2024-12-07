@@ -69,6 +69,11 @@ cameraFolder.add(camera.position, 'x', -5, 5);
 cameraFolder.add(camera.position, 'y', -5, 5);
 cameraFolder.add(camera.position, 'z', -5, 5);
 
+const sceneFolder = gui.addFolder('Scene');
+sceneFolder.add(activeScene, 'backgroundBlurriness', 0, 1).onChange((value) => {
+  activeScene.backgroundBlurriness = value
+});
+
 gui.add(setScene, 'sceneA').name('Scene A')
 gui.add(setScene, 'sceneB').name('Scene B')
 gui.add(setScene, 'sceneC').name('Scene C')
