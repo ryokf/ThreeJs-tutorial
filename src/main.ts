@@ -1,60 +1,77 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import './style.css'
+import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
+import Stats from 'three/addons/libs/stats.module.js'
+// import hdr from './img/venice_sunset_1k.hdr'
+// import image from './img/grid.png'
+// import model from './models/suzanne_no_material.glb'
 
 const scene = new THREE.Scene()
 
-const renderer = new THREE.WebGLRenderer()
+// const hdr = 'https://sbcode.net/img/venice_sunset_1k.hdr'
+// const image = 'https://sbcode.net/img/grid.png'
+// const model = 'https://sbcode.net/models/suzanne_no_material.glb'
+
+// const hdr = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/equirectangular/venice_sunset_1k.hdr'
+// const image = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/textures/uv_grid_opengl.jpg'
+// const model = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Xbot.glb'
+
+const hdr = 'img/venice_sunset_1k.hdr'
+const image = 'img/grid.png'
+const model = 'models/suzanne_no_material.glb'
+
+new RGBELoader().load(hdr, (texture) => {
+  texture.mapping = THREE.EquirectangularReflectionMapping
+  scene.environment = texture
+  scene.background = texture
+})
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
+camera.position.set(-2, 0.5, 2)
+
+const renderer = new THREE.WebGLRenderer({ antialias: true })
+renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.setSize(window.innerWidth, window.innerHeight)
-renderer.shadowMap.enabled = true
 document.body.appendChild(renderer.domElement)
 
-const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100)
-camera.position.set(5,5,5);
-new OrbitControls(camera, renderer.domElement)
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(window.innerWidth, window.innerHeight)
+})
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 1)
-scene.add(ambientLight)
+const controls = new OrbitControls(camera, renderer.domElement)
+controls.enableDamping = true
 
-const directionalLight = new THREE.DirectionalLight(0xffffff)
-directionalLight.position.set(1,1,1)
-directionalLight.intensity = 1
-directionalLight.castShadow = true
-directionalLight.receiveShadow = true
-scene.add(directionalLight)
+const material = new THREE.MeshStandardMaterial()
+material.map = new THREE.TextureLoader().load(image)
+//material.map.colorSpace = THREE.SRGBColorSpace
 
-const plane = new THREE.Mesh(new THREE.PlaneGeometry(10,10), new THREE.MeshStandardMaterial({color: 0xffffff}))
-plane.rotation.x = -Math.PI / 2 
-plane.receiveShadow = true
-plane.castShadow = true
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), material)
+plane.rotation.x = -Math.PI / 2
+plane.position.y = -1
 scene.add(plane)
 
-const sun = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshBasicMaterial({color: 0xffffaa}))
-sun.position.set(5,5,5)
-scene.add(sun)
+new GLTFLoader().load(model, (gltf) => {
+  gltf.scene.traverse((child) => {
+    ;(child as THREE.Mesh).material = material
+  })
+  scene.add(gltf.scene)
+})
 
-const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
-const cube = new THREE.Mesh( geometry, material );
-cube.position.y = 0.5
-cube.castShadow = true
-// cube.receiveShadow = true
-scene.add( cube );
+const stats = new Stats()
+document.body.appendChild(stats.dom)
 
-function animate(){
-  camera.lookAt(0,0,0)
+function animate() {
+  requestAnimationFrame(animate)
+
+  controls.update()
+
   renderer.render(scene, camera)
-  renderer.setAnimationLoop(animate)
 
-  const time = Date.now() * 0.0005;
-  const x = Math.sin(time) * 7;
-  const y = Math.cos(time) * 5;
-  directionalLight.position.set(x, y, 0)
-
-  sun.position.set(x, y, 0)
-
-  // cube.rotation.x += 0.01
-  // cube.rotation.z += 0.01 
-  // cube.rotation.y += 0.01
+  stats.update()
 }
 
 animate()
