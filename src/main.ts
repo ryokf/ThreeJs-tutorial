@@ -7,12 +7,12 @@ import Stats from 'three/addons/libs/stats.module.js'
 
 const scene = new THREE.Scene()
 
-new RGBELoader().load('img/venice_sunset_1k.hdr', (texture) => {
+new RGBELoader().load('img/studio_small_09_4k.hdr', (texture) => {
   texture.mapping = THREE.EquirectangularReflectionMapping
   scene.environment = texture
   scene.background = texture
   scene.castShadow = true
-  scene.backgroundBlurriness = 0.1
+  scene.backgroundBlurriness = 0
 })
 
 const axesHelper = new THREE.AxesHelper(100)
@@ -154,8 +154,8 @@ new GLTFLoader().load('models/porsche_911_gt3tm.glb', (gltf) => {
   const wheelsConfig: WheelConfig[] = [
     { position: [2.3, 0.8, 3], scale: [1.55, 1.55, 1.55] },
     { position: [-2.3, 0.8, 3], scale: [1.55, 1.55, 1.55], rotation: { z: Math.PI } },
-    { position: [2.4, 0.9, -3.2], scale: [1.55, 1.55, 1.55] },
-    { position: [-2.4, 0.9, -3.2], scale: [1.55, 1.55, 1.55], rotation: { z: Math.PI } },
+    { position: [2.3, 0.9, -3.2], scale: [1.55, 1.55, 1.55] },
+    { position: [-2.3, 0.9, -3.2], scale: [1.55, 1.55, 1.55], rotation: { z: Math.PI } },
   ];
   
   // Material untuk velg
@@ -181,7 +181,7 @@ new GLTFLoader().load('models/porsche_911_gt3tm.glb', (gltf) => {
     const spoiler = gltf.scene
     spoiler.scale.set(0.3,0.3,0.3)
     spoiler.rotation.y = Math.PI
-    spoiler.position.set(0.2,2,-5.5)
+    spoiler.position.set(0.2,2,-5.3)
     porcshe.add(gltf.scene)
   })
   
