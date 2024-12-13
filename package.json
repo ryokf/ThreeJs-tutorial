@@ -11,6 +11,7 @@
   "devDependencies": {
     "@monogrid/gainmap-js": "^3.1.0",
     "@types/three": "^0.170.0",
+    "jeasings": "^0.0.16",
     "three": "^0.171.0",
     "typescript": "~5.6.2",
     "vite": "^6.0.1"
