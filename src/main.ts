@@ -1,151 +1,145 @@
-import './style.css'
-import * as THREE from 'three'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
-import Stats from 'three/addons/libs/stats.module.js'
-import JEASINGS from 'jeasings'
+import "./style.css";
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import Stats from "three/addons/libs/stats.module.js";
 
-const scene = new THREE.Scene()
+const scene = new THREE.Scene();
 
-const gridHelper = new THREE.GridHelper()
-gridHelper.position.y = -1
-scene.add(gridHelper)
+const gridHelper = new THREE.GridHelper(100, 100);
+scene.add(gridHelper);
 
-await new RGBELoader().loadAsync('img/venice_sunset_1k.hdr').then((texture) => {
-  texture.mapping = THREE.EquirectangularReflectionMapping
-  scene.environment = texture
-})
+new RGBELoader().load("img/venice_sunset_1k.hdr", (texture) => {
+  texture.mapping = THREE.EquirectangularReflectionMapping;
+  scene.environment = texture;
+  scene.background = texture;
+  scene.backgroundBlurriness = 1;
+});
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
-camera.position.set(0, 1, 4)
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  100
+);
+camera.position.set(0.1, 1, 1);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true })
-renderer.toneMapping = THREE.ACESFilmicToneMapping
-renderer.toneMappingExposure = 0.8
-renderer.shadowMap.enabled = true
-renderer.setSize(window.innerWidth, window.innerHeight)
-document.body.appendChild(renderer.domElement)
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight
-  camera.updateProjectionMatrix()
-  renderer.setSize(window.innerWidth, window.innerHeight)
-  //render() //this line is unnecessary if you are re-rendering within the animation loop
-})
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
-const controls = new OrbitControls(camera, renderer.domElement)
-controls.enableDamping = true
-//controls.addEventListener('change', render) //this line is unnecessary if you are re-rendering within the animation loop
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 0.75, 0);
 
-let suzanne: THREE.Mesh, plane: THREE.Mesh
+const stats = new Stats();
+document.body.appendChild(stats.dom);
 
-new GLTFLoader().load('models/suzanne_scene 2.glb', (gltf) => {
-  suzanne = gltf.scene.getObjectByName('Suzanne') as THREE.Mesh
-  suzanne.castShadow = true
-  ;((suzanne.material as THREE.MeshStandardMaterial).map as THREE.Texture).colorSpace = THREE.LinearSRGBColorSpace
+function lerp(from: number, to: number, speed: number) {
+  const amount = (1 - speed) * from + speed * to
+  return Math.abs(from - to) < 0.001 ? to : amount
+}
 
-  plane = gltf.scene.getObjectByName('Plane') as THREE.Mesh
-  plane.scale.set(50, 1, 50)
-  ;(plane.material as THREE.MeshStandardMaterial).envMap = scene.environment // since three@163, we need to set `envMap` before changing `envMapIntensity` has any effect.
-  ;(plane.material as THREE.MeshStandardMaterial).envMapIntensity = 0.05
-  plane.receiveShadow = true
+let mixer: THREE.AnimationMixer;
+let animationActions: { [key: string]: THREE.AnimationAction } = {};
+let activeAction: THREE.AnimationAction;
+let speed = 0,
+  toSpeed = 0
 
-  const spotLight = gltf.scene.getObjectByName('Spot') as THREE.SpotLight
-  spotLight.intensity /= 500
-  spotLight.castShadow = true
-  spotLight.target = suzanne
+// new GLTFLoader().load("models/eve$@walk.glb", (gltf) => {
+//   mixer = new THREE.AnimationMixer(gltf.scene);
+//   console.log(mixer);
 
-  scene.add(gltf.scene)
+//   mixer.clipAction(gltf.animations[0]).play();
 
-  //render()
-})
+//   scene.add(gltf.scene);
+// });
 
-const raycaster = new THREE.Raycaster()
-const mouse = new THREE.Vector2()
+async function loadEve() {
+  const loader = new GLTFLoader();
+  const [eve, idle, run] = await Promise.all([
+    loader.loadAsync("models/eve$@walk.glb"),
+    loader.loadAsync("models/eve@idle.glb"),
+    loader.loadAsync("models/eve@run.glb"),
+  ]);
 
-renderer.domElement.addEventListener('dblclick', (e) => {
-  mouse.set((e.clientX / renderer.domElement.clientWidth) * 2 - 1, -(e.clientY / renderer.domElement.clientHeight) * 2 + 1)
+  mixer = new THREE.AnimationMixer(eve.scene);
 
-  raycaster.setFromCamera(mouse, camera)
+  // mixer.clipAction(run.animations[1]).play()
 
-  const intersects = raycaster.intersectObjects([suzanne, plane], false)
+  animationActions["idle"] = mixer.clipAction(idle.animations[1]);
+  animationActions["walk"] = mixer.clipAction(eve.animations[0]);
+  animationActions["run"] = mixer.clipAction(run.animations[2]);
 
-  if (intersects.length) {
-    const p = intersects[0].point
+  animationActions["idle"].play();
+  activeAction = animationActions["idle"];
 
-    //controls.target.set(p.x, p.y, p.z)
+  scene.add(eve.scene);
+}
+await loadEve();
 
-    // // JEasing the controls.target
-    // new JEASINGS.JEasing(controls.target)
-    //   .to(
-    //     {
-    //       x: p.x,
-    //       y: p.y,
-    //       z: p.z
-    //     },
-    //     500
-    //   )
-    //   //.delay (1000)
-    //   //.easing(JEASINGS.Cubic.Out)
-    //   //.onUpdate(() => render())
-    //   .start()
+const keyMap: { [key: string]: boolean } = {};
 
-    // // slding x,z
-    // new JEASINGS.JEasing(suzanne.position)
-    //   .to(
-    //     {
-    //       x: p.x,
-    //       z: p.z
-    //     },
-    //     500
-    //   )
-    //   .start()
+const onDocumentKey = (e: KeyboardEvent) => {
+  keyMap[e.code] = e.type === "keydown";
+};
+document.addEventListener("keydown", onDocumentKey, false);
+document.addEventListener("keyup", onDocumentKey, false);
 
-    // // going up
-    // new JEASINGS.JEasing(suzanne.position)
-    //   .to(
-    //     {
-    //       y: p.y + 3
-    //     },
-    //     250
-    //   )
-    //   //.easing(JEASINGS.Cubic.Out)
-    //   .start()
-    // //.onComplete(() => {
-
-    // // going down
-    // new JEASINGS.JEasing(suzanne.position)
-    //   .to(
-    //     {
-    //       y: p.y + 1
-    //     },
-    //     250
-    //   )
-    //   .delay(250)
-    //   //.easing(JEASINGS.Cubic.In)
-    //   .start()
-    // //})
-  }
-})
-
-const stats = new Stats()
-document.body.appendChild(stats.dom)
+const clock = new THREE.Clock();
+let delta = 0;
 
 function animate() {
-  requestAnimationFrame(animate)
+  requestAnimationFrame(animate);
 
-  controls.update()
+  delta = clock.getDelta();
 
-  JEASINGS.update()
+  controls.update();
 
-  render()
+  mixer.update(delta);
 
-  stats.update()
+  if (keyMap["KeyW"]) {
+    if (keyMap["ShiftLeft"]) {
+      //run
+      if (activeAction != animationActions["run"]) {
+        activeAction.fadeOut(0.5);
+        animationActions["run"].reset().fadeIn(0.25).play();
+        activeAction = animationActions["run"];
+        toSpeed = 4
+      }
+    } else {
+      //walk
+      if (activeAction != animationActions["walk"]) {
+        activeAction.fadeOut(0.5);
+        animationActions["walk"].reset().fadeIn(0.25).play();
+        activeAction = animationActions["walk"];
+        toSpeed = 1
+      }
+    }
+  } else {
+    //idle
+    if (activeAction != animationActions["idle"]) {
+      activeAction.fadeOut(0.5);
+      animationActions["idle"].reset().fadeIn(0.25).play();
+      activeAction = animationActions["idle"];
+      toSpeed = 0
+    }
+  }
+
+  speed = lerp(speed, toSpeed, delta * 10)
+  gridHelper.position.z -= speed * delta
+  // gridHelper.position.z = gridHelper.position.z % 10
+
+  renderer.render(scene, camera);
+
+  stats.update();
 }
 
-function render() {
-  renderer.render(scene, camera)
-}
-
-animate()
+animate();
