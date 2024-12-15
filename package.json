@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@dimforge/rapier3d-compat": "^0.14.0",
     "@monogrid/gainmap-js": "^3.1.0",
     "@types/three": "^0.170.0",
     "jeasings": "^0.0.16",
